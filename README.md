@@ -26,6 +26,7 @@
 #define MEASUREMENT_FILE      // Measurement file name
 #define OBJ_DET_CYCLE_IDX     // Count of measurement
 ```
+* To use **On-demand Capture** with OpenCV, you don't need any modification. Just build it. See **OpenCV rebuild** in https://github.com/AveesLab/OpenCV-3.3.1.
 
 # Usage 
 
@@ -64,6 +65,7 @@ $ ./darknet detector rtod cfg/coco.data cfg weights
        cfg: YOLO network configure file
    weights: weights file
 ```
+
 
 # Citation
 The paper can be found [here](https://arxiv.org/pdf/2011.06372.pdf). For citation, please use the following Bibtex.

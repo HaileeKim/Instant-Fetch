@@ -71,8 +71,11 @@ void release_video_writer(write_cv **output_video_writer);
 // Video Capture
 cap_cv* get_capture_video_stream(const char *path);
 cap_cv* get_capture_webcam(int index);
+cap_cv* get_capture_webcam_with_prop(int index, int w, int h, int fps);
+cap_cv* get_capture_webcam_set_v4l2(int index, int opencv_buffer_size);
 void release_capture(cap_cv* cap);
 
+//mat_cv* get_capture_frame_cv_with_timestamp(cap_cv *cap,double *frame_timestamp, int buff_index); 
 mat_cv* get_capture_frame_cv_with_timestamp(cap_cv *cap, struct frame_data *f); 
 mat_cv* get_capture_frame_cv(cap_cv *cap);
 int get_stream_fps_cpp_cv(cap_cv *cap);
@@ -87,6 +90,10 @@ image get_image_from_stream_resize(cap_cv *cap, int w, int h, int c, mat_cv** in
 image get_image_from_stream_resize_with_timestamp(cap_cv *cap, int w, int h, int c, mat_cv** in_img, int dont_close, struct frame_data *f);
 image get_image_from_stream_letterbox(cap_cv *cap, int w, int h, int c, mat_cv** in_img, int dont_close);
 void consume_frame(cap_cv *cap);
+image get_image_from_v4l2(int w, int h, int c, mat_cv** in_img, int dont_close, struct frame_data *f);
+image get_image_from_stream_letterbox(cap_cv *cap, int w, int h, int c, mat_cv** in_img, int dont_close);
+image get_image_from_v4l2(int w, int h, int c, mat_cv** in_img, int dont_close, struct frame_data *f);
+
 
 // Image Saving
 void save_cv_png(mat_cv *img, const char *name);

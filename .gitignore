@@ -19,7 +19,6 @@ opencv/
 convnet/
 decaf/
 submission/
-cfg/
 temp/
 build/darknet/*
 build_*/
@@ -41,6 +40,12 @@ build/Makefile
 */vcpkg-manifest-install.log
 build.log
 __pycache__/
+signle_cam/
+*.nvvp
+*.csv
+*.zip
+result_image/
+revision/
 
 # OS Generated #
 .DS_Store*

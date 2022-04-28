@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "box.h"
 #include "demo.h"
+#include "rtod.h"
 
 char *voc_names[] = {"aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"};
 
@@ -353,7 +354,6 @@ void run_yolo(int argc, char **argv)
     int frame_skip = find_int_arg(argc, argv, "-s", 0);
 	int ext_output = find_arg(argc, argv, "-ext_output");
 
-
 	int w = find_int_arg(argc, argv, "-w", 640);
 	int h = find_int_arg(argc, argv, "-h", 480);
 	int fps = find_int_arg(argc, argv, "-fps", 30);
@@ -372,4 +372,5 @@ void run_yolo(int argc, char **argv)
     else if(0==strcmp(argv[2], "recall")) validate_yolo_recall(cfg, weights);
    // else if(0==strcmp(argv[2], "demo")) demo(cfg, weights, thresh, hier_thresh, cam_index, filename, voc_names, 20, frame_skip, prefix, out_filename, mjpeg_port, json_port, dont_show, ext_output, 0, 0, 0, 0, 0, w, h, fps);
     else if(0==strcmp(argv[2], "rtod")) rtod(cfg, weights, thresh, hier_thresh, cam_index, filename, voc_names, 20, frame_skip, prefix, out_filename, mjpeg_port, json_port, dont_show, ext_output, 0, 0, 0, 0, 0, w, h, fps);
+
 }

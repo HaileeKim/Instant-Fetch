@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #ifndef LIB_API
 #ifdef LIB_EXPORTS
@@ -32,6 +33,8 @@
 #endif
 #endif
 
+
+typedef void* mat_cv;
 #define SECRET_NUM -1234
 
 typedef enum { UNUSED_DEF_VAL } UNUSED_ENUM_TYPE;

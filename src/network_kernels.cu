@@ -61,6 +61,8 @@ int time_comparator(const void *pa, const void *pb)
 
 void forward_network_gpu(network net, network_state state)
 {
+    extern double e_infer_gpu;
+
     static time_benchmark_layers *avg_time_per_layer = NULL;
     static time_benchmark_layers *sorted_avg_time_per_layer = NULL;
     double start_time, end_time;
@@ -139,6 +141,7 @@ void forward_network_gpu(network net, network_state state)
 */
         if(l.type == REGION) e_infer_gpu = get_time_in_ms() - gpu_kernel_start; // v2
     }
+        //printf("detect in gpu : %f\n", e_infer_gpu);
 
     if (net.benchmark_layers) {
         printf("\n\nSorted by time (forward):\n");
