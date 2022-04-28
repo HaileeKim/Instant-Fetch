@@ -38,6 +38,8 @@
 
 #include "http_stream.h"
 
+double gpu_kernel_start;
+
 float * get_network_output_gpu_layer(network net, int i);
 float * get_network_delta_gpu_layer(network net, int i);
 float * get_network_output_gpu(network net);
@@ -73,6 +75,7 @@ void forward_network_gpu(network net, network_state state)
     //printf("\n");
     state.workspace = net.workspace;
     int i;
+    gpu_kernel_start = get_time_in_ms();
     for(i = 0; i < net.n; ++i){
         state.index = i;
         layer l = net.layers[i];
@@ -134,6 +137,7 @@ void forward_network_gpu(network net, network_state state)
             cvDestroyAllWindows();
         }
 */
+        if(l.type == REGION) e_infer_gpu = get_time_in_ms() - gpu_kernel_start; // v2
     }
 
     if (net.benchmark_layers) {
@@ -679,7 +683,12 @@ float train_networks(network *nets, int n, data d, int interval)
 float *get_network_output_layer_gpu(network net, int i)
 {
     layer l = net.layers[i];
-    if(l.type != REGION && l.type != YOLO && (*net.cuda_graph_ready) == 0) cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
+    if(l.type != REGION && l.type != YOLO && (*net.cuda_graph_ready) == 0)
+    {
+        extern double e_infer_gpu;
+        cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
+        e_infer_gpu = get_time_in_ms() - gpu_kernel_start;
+    }
     return l.output;
 }
 
