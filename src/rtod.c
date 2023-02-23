@@ -279,6 +279,15 @@ int check_on_demand(void)
     return on_demand;
 }
 
+#ifdef INSTANT
+void *rtod_queue_thread(void *ptr)
+{
+    printf("=queue index : %d\n", cap_index);
+    capture_image(&frame[cap_index], *fd_handler);
+    return 0;
+}
+#endif
+
 void *rtod_fetch_thread(void *ptr)
 {
     start_fetch = get_time_in_ms();
@@ -290,11 +299,11 @@ void *rtod_fetch_thread(void *ptr)
         in_s = get_image_from_stream_letterbox(cap, net.w, net.h, net.c, &in_img, dont_close_stream);
     else{
 #ifdef V4L2
-		if(-1 == capture_image(&frame[buff_index], *fd_handler))
-		{
-			perror("Fail to capture image");
-			exit(0);
-		}
+#ifdef INSTANT
+        convert_image(&frame[buff_index], *fd_handler);
+#else
+	capture_convert_image(&frame[buff_index], *fd_handler);
+#endif
         letterbox_image_into(frame[buff_index].frame, net.w, net.h, frame[buff_index].resize_frame);
         //frame[buff_index].resize_frame = letterbox_image(frame[buff_index].frame, net.w, net.h);
         //show_image_cv(frame[buff_index].resize_frame,"im");
@@ -469,6 +478,9 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     pthread_t fetch_thread;
     pthread_t inference_thread;
+#ifdef INSTANT
+    pthread_t queue_thread;
+#endif    
 
 #ifndef V4L2
     ondemand = check_on_demand();
@@ -487,7 +499,7 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     //printf("ondemand : %d\n", ondemand);
 
 #ifdef V4L2
-	if(-1 == capture_image(&frame[buff_index], *fd_handler))
+	if(-1 == capture_convert_image(&frame[buff_index], *fd_handler))
 	{
 		perror("Fail to capture image");
 		exit(0);
@@ -499,6 +511,10 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     frame[2].frame = frame[0].frame;
     frame[2].resize_frame = letterbox_image(frame[0].frame, net.w, net.h);
+#if (defined INSTANT) && (defined ZERO_SLACK)
+    frame[3].frame = frame[0].frame;
+    frame[3].resize_frame = letterbox_image(frame[0].frame, net.w, net.h);
+#endif
 #else
     rtod_fetch_thread(0);
     det_img = in_img;
@@ -556,20 +572,35 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
         ++count;
         {
 #if (defined ZERO_SLACK)
+
+#ifndef INSTANT
             /* Image index */
             display_index = (buff_index + 1) %3;
             detect_index = (buff_index + 2) %3;
+#else    
+            display_index = (buff_index + 2) %4;
+            detect_index = (buff_index + 3) %4;
+            cap_index = (buff_index + 1) %4;
+#endif
+
 #elif (defined CONTENTION_FREE)
             display_index = (buff_index + 2) %3;
             detect_index = (buff_index) %3;
+#ifdef INSTANT
+            cap_index = (buff_index + 1) %3;
+#endif
 #else
-    fprintf(stderr, "ERROR: Set either ZERO_SLACK or CONTENTION_FREE in Makefile\n");
-    exit(0);
+    //fprintf(stderr, "ERROR: Set either ZERO_SLACK or CONTENTION_FREE in Makefile\n");
+    //exit(0);
 #endif
             const float nms = .45;    // 0.4F
             int local_nboxes = nboxes;
             detection *local_dets = dets;
 
+            /* Fork queue thread */
+#if (defined INSTANT) && (defined ZERO_SLACK)
+            if (!benchmark) if (pthread_create(&queue_thread, 0, rtod_queue_thread, 0)) perror("Thread creation failed");
+#endif
             /* Fork fetch thread */
             if (!benchmark) if (pthread_create(&fetch_thread, 0, rtod_fetch_thread, 0)) error("Thread creation failed");
 
@@ -674,6 +705,10 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             d_disp = end_disp - start_disp; 
 
+#if (defined INSTANT) && (defined ZERO_SLACK)
+            pthread_join(queue_thread, 0);
+#endif
+
 #ifdef ZERO_SLACK
             /* Join Inference thread */
             pthread_join(inference_thread, 0);
@@ -688,8 +723,14 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
             /* Change infer image for next object detection cycle*/
             det_img = in_img;
             det_s = in_s;
-
+            /* Fork Queue in fetch thread */
+#ifdef INSTANT
+            if (!benchmark) if (pthread_create(&queue_thread, 0, rtod_queue_thread, 0)) perror("Thread creation failed");
+#endif
             rtod_inference_thread(0);
+#ifdef INSTANT
+            pthread_join(queue_thread, 0);
+#endif
 #endif
 
             if (time_limit_sec > 0 && (get_time_point() - start_time_lim)/1000000 > time_limit_sec) {
@@ -734,8 +775,12 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
                 start_time = get_time_point();
             }
         }
-        cycle_array[cycle_index] = 1000./fps;
+        cycle_array[cycle_index] = 1000./fps;        
+#if (defined INSTANT) && (defined ZERO_SLACK)    
         cycle_index = (cycle_index + 1) % 4;
+#else
+        cycle_index = (cycle_index + 1) % 3;
+#endif 
         slack_time = (MAX(d_infer, d_disp)) - (d_fetch);
 
 #ifdef ZERO_SLACK
@@ -769,7 +814,11 @@ void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
         /* Increase count */
         if(cnt != ((OBJ_DET_CYCLE_IDX + CYCLE_OFFSET)-1)) cnt++;
         /* Change buffer index */
+#if (defined INSTANT) && (defined ZERO_SLACK)  
+        buff_index = (buff_index + 1) % 4;
+#else        
         buff_index = (buff_index + 1) % 3;
+#endif
     }
     cnt = 0;
 

@@ -15,7 +15,11 @@
 #define OBJ_DET_CYCLE_IDX 1000
 
 #define QLEN 4
+#if (defined ZERO_SLACK) && (defined INSTANT)
+#define NFRAMES 4
+#else
 #define NFRAMES 3
+#endif
 
 #define MAX(x,y) (((x) < (y) ? (y) : (x)))
 #define MIN(x,y) (((x) < (y) ? (x) : (y)))
@@ -34,8 +38,11 @@ extern "C" {
 }
 #endif
 
+#if (defined ZERO_SLACK) && (defined INSTANT)
+struct frame_data frame[4]; // v4l2 image data
+#else
 struct frame_data frame[3]; // v4l2 image data
-
+#endif
 double e_fetch_array[OBJ_DET_CYCLE_IDX];
 double b_fetch_array[OBJ_DET_CYCLE_IDX];
 double d_fetch_array[OBJ_DET_CYCLE_IDX];
@@ -76,8 +83,13 @@ double e_fetch_max;
 double b_fetch_max;
 #endif
 
+#if (defined ZERO_SLACK) && (defined INSTANT)
+double frame_timestamp[4];
+#else
 double frame_timestamp[3];
+#endif
 int buff_index;
+int cap_index;
 int sleep_time;
 int cnt;
 int display_index;
