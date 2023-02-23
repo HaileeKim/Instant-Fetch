@@ -1,22 +1,40 @@
-#!/bin/bash
+#ZERO SLACK 
 
-if [ $# -lt 2 ] 
-then
+sed -i 's/CONTENTION_FREE=1/CONTENTION_FREE=0/g' Makefile
+sed -i 's/ZERO_SLACK=0/ZERO_SLACK=1/g' Makefile
+make -j8
 
-	echo "Too few argument";
-	echo "$0 <cfg_path weights_path>"
+./darknet detector rtod cfg/coco.data cfg/yolov2.cfg ~/yolov2.weights -c 0
+cd measure/
+mv measure.csv v2_ZS.csv
+cd ..
 
-	exit 1;
-fi
+./darknet detector rtod cfg/coco.data cfg/yolov3.cfg ~/yolov3.weights -c 0
+cd measure/
+mv measure.csv v3_ZS.csv
+cd ..
 
-if [ $# -ge 2 ]
-then
-	
-	echo "Start darknet"
+./darknet detector rtod cfg/coco.data cfg/yolov4.cfg ~/yolov4.weights -c 0
+cd measure/
+mv measure.csv v4_ZS.csv
+cd ..
 
-#DBUS_FATAL_WARNINGS=0 ./darknet detector demo cfg/coco.data $1 $2 -c ${3-0} -fps ${4-30} -w ${5-640} -h ${6-480}
-#./darknet detector demo cfg/coco.data $1 $2 -c ${3-0} -fps ${4-30} -w ${5-640} -h ${6-480}
-	./darknet detector demo cfg/coco.data $1 $2 -c ${3-0} -offset ${4-0}
 
-fi
+# CONTENTION FREE
+sed -i 's/CONTENTION_FREE=0/CONTENTION_FREE=1/g' Makefile
+sed -i 's/ZERO_SLACK=1/ZERO_SLACK=0/g' Makefile
+make -j8
+./darknet detector rtod cfg/coco.data cfg/yolov2.cfg ~/yolov2.weights -c 0
+cd measure/
+mv measure.csv v2_CF.csv
+cd ..
 
+./darknet detector rtod cfg/coco.data cfg/yolov3.cfg ~/yolov3.weights -c 0
+cd measure/
+mv measure.csv v3_CF.csv
+cd ..
+
+./darknet detector rtod cfg/coco.data cfg/yolov4.cfg ~/yolov4.weights -c 0
+cd measure/
+mv measure.csv v4_CF.csv
+cd ..
