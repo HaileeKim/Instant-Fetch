@@ -4,12 +4,9 @@
 #include "image.h"
 
 #if (defined ZERO_SLACK)
-#define CYCLE_OFFSET 25
-#elif (defined INSTANT) && (defined CONTENTION_FREE)
-#define CYCLE_OFFSET 200
-#else
-#define CYCLE_OFFSET 25
+#define ZERO_SLACK_CYCLE_OFFSET 1000
 #endif
+#define CYCLE_OFFSET 25
 
 /* Measurement */
 #define MEASUREMENT_PATH "measure"
@@ -24,14 +21,13 @@
 /* calculate inter frame gap */
 #define GET_IFG(x,y) ((x) - (y)); \
     (y) = (x);
-    
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host, int benchmark, int benchmark_layers, int w, int h, int cam_fps);
-
-void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes, int avgframes, int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int dontdraw_bbox, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host, int benchmark, int benchmark_layers, int w, int h, int cam_fps);
+    void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes,
+            int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host, int benchmark, int benchmark_layers, int w, int h, int cam_fps);
 #ifdef __cplusplus
 }
 #endif
@@ -71,7 +67,6 @@ double cycle_time_sum;
 double inter_frame_gap_sum;
 double num_object_sum;
 double trace_data_sum;
-double transfer_delay_sum;
 
 #ifdef ZERO_SLACK
 double s_min;
@@ -81,7 +76,6 @@ double b_fetch_max;
 
 double frame_timestamp[3];
 int buff_index;
-int cap_index;
 int sleep_time;
 int cnt;
 int display_index;
@@ -96,7 +90,6 @@ int measure;
 int frame_sequence_tmp;
 int inter_frame_gap;
 
-int csleep;
 double start_infer;
 double end_infer;
 double d_infer;
@@ -117,15 +110,10 @@ double draw_bbox_time;
 double waitkey_start;
 double e_infer_gpu;
 double b_disp;
-double start_loop[3];
 
 char **demo_names;
 image **demo_alphabet;
 int demo_classes;
-
-int classes;
-int top;
-int* indexes;
 
 int nboxes;
 detection *dets;
@@ -142,7 +130,6 @@ long long int frame_id;
 int demo_json_port;
 
 float* predictions[NFRAMES];
-float* prediction;
 int demo_index;
 mat_cv* cv_images[NFRAMES];
 float *avg;
@@ -156,7 +143,7 @@ int letter_box;
 
 void push_data(void);
 int get_fetch_offset(void);
-int write_result(char *file_path);
+int write_result(void);
 double get_time_in_ms(void);
 int check_on_demand(void);
 void *rtod_fetch_thread(void *ptr);

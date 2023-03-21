@@ -6,7 +6,7 @@
 #include "utils.h"
 #include "parser.h"
 #include "box.h"
-#include "demo.h"
+//#include "demo.h"
 #include "rtod.h"
 
 char *coco_classes[] = {"person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"};
@@ -420,7 +420,8 @@ void run_coco(int argc, char **argv)
 /*
     else if(0==strcmp(argv[2], "demo")) demo(cfg, weights, thresh, hier_thresh, cam_index, filename, coco_classes, 80, 1, frame_skip,
 		prefix, out_filename, mjpeg_port, 0, json_port, dont_show, ext_output, 0, 0, 0, 0, 0);
-*/
-    else if(0==strcmp(argv[2], "rtod")) rtod(cfg, weights, thresh, hier_thresh, cam_index, filename, coco_classes, 80, frame_skip,
+
+    else if(0==strcmp(argv[2], "rtod")) rtod(datacfg, cfg, weights, thresh, hier_thresh, cam_index, filename, coco_classes, 80, frame_skip,
 		prefix, out_filename, mjpeg_port, json_port, dont_show, ext_output, 0, 0, 0, 0, 0, w, h, fps);
+*/
 }

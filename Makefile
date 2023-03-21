@@ -8,11 +8,14 @@ LIBSO=0
 ZED_CAMERA=0 # ZED SDK 3.0 and above
 ZED_CAMERA_v2_8=0 # ZED SDK 2.X
 
-V4L2=0
-ZERO_SLACK=0
-CONTENTION_FREE=1
+V4L2=1
+ZERO_SLACK=1
+CONTENTION_FREE=0
 MEASUREMENT=1
+DNN=0
+INSTANT=1
 
+# if DNN=1, use YOLO DNN, if DNN=0, use other DNN 
 # set GPU=1 and CUDNN=1 to speedup on GPU
 # set CUDNN_HALF=1 to further speedup 3 x times (Mixed-precision on Tensor Cores) GPU: Volta, Xavier, Turing and higher
 # set AVX=1 and OPENMP=1 to speedup on CPU (if error occurs then set AVX=0)
@@ -87,6 +90,14 @@ endif
 ifeq ($(V4L2), 1)
 CFLAGS+= -DV4L2
 LDFLAGS+= -lv4l2 
+endif
+
+ifeq ($(DNN), 1)
+CFLAGS+= -DDNN
+endif
+
+ifeq ($(INSTANT), 1)
+CFLAGS+= -DINSTANT
 endif
 
 ifeq ($(DEBUG), 1)

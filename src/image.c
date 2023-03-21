@@ -341,7 +341,9 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
     qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_lefts);
     int i;
     num_object = selected_detections_num;
+    printf("selected ~~ : %d \n", num);
     for (i = 0; i < selected_detections_num; ++i) {
+        //printf("==================hidraw=================\n");
         const int best_class = selected_detections[i].best_class;
         printf("%s: %.0f%%", names[best_class],    selected_detections[i].det.prob[best_class] * 100);
         if (ext_output)
