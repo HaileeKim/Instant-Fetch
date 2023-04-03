@@ -6,7 +6,7 @@
 #include "parser.h"
 #include "box.h"
 #include "image.h"
-#include "demo.h"
+#include "rtod.h"
 #include "darknet.h"
 #ifdef WIN32
 #include <time.h>
@@ -19,7 +19,7 @@
 #ifdef OPENCV
 
 #include "http_stream.h"
-
+/*
 static char **demo_names;
 static image **demo_alphabet;
 static int demo_classes;
@@ -51,9 +51,17 @@ mat_cv* show_img;
 
 static volatile int flag_exit;
 static int letter_box = 0;
+*/
+static int avg_frames = 3;
+//static bool demo_skip_frame = false;
+static const int thread_wait_ms = 1;
+static volatile int run_fetch_in_thread = 0;
+static volatile int run_detect_in_thread = 0;
+
 
 void *fetch_in_thread(void *ptr)
 {
+    start_fetch = get_time_in_ms();
     int dont_close_stream = 0;    // set 1 if your IP-camera periodically turns off and turns on video-stream
     if(letter_box)
         in_s = get_image_from_stream_letterbox(cap, net.w, net.h, net.c, &in_img, dont_close_stream);
@@ -66,12 +74,23 @@ void *fetch_in_thread(void *ptr)
         return 0;
     }
     //in_s = resize_image(in, net.w, net.h);
+    end_fetch = get_time_in_ms();
+    inter_frame_gap = GET_IFG(frame[buff_index].frame_sequence, frame_sequence_tmp);
 
+    if(cnt >= (CYCLE_OFFSET - 5))
+    {
+        d_fetch = end_fetch - start_fetch;
+        //b_fetch = start_fetch - frame[display_index].frame_timestamp - 28.0;
+        e_fetch = d_fetch - b_fetch - fetch_offset;
+    }   
+    
+    
     return 0;
 }
 
 void *detect_in_thread(void *ptr)
 {
+    start_infer = get_time_in_ms();
     layer l = net.layers[net.n-1];
     float *X = det_s.data;
     float *prediction = network_predict(net, X);
@@ -89,6 +108,9 @@ void *detect_in_thread(void *ptr)
     else
         dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
 
+    end_infer = get_time_in_ms();
+
+    d_infer = end_infer - start_infer;
     return 0;
 }
 
@@ -103,8 +125,10 @@ double get_wall_time()
 
 void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes,
     int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host,
-    int benchmark, int benchmark_layers)
+    int benchmark, int benchmark_layers, int w, int h, int cam_fps)
 {
+
+
     letter_box = letter_box_in;
     in_img = det_img = show_img = NULL;
     //skip = frame_skip;
@@ -117,6 +141,13 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     demo_ext_output = ext_output;
     demo_json_port = json_port;
     printf("Demo\n");
+
+    int img_w = w;
+    int img_h = h;
+    int cam_frame_rate= cam_fps;
+    
+
+        
     net = parse_network_cfg_custom(cfgfile, 1, 1);    // set batch=1
     if(weightfile){
         load_weights(&net, weightfile);
@@ -129,10 +160,13 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     if(filename){
         printf("video file: %s\n", filename);
         cap = get_capture_video_stream(filename);
+
     }else{
         printf("Webcam index: %d\n", cam_index);
         cap = get_capture_webcam(cam_index);
+
     }
+    
 
     if (!cap) {
 #ifdef WIN32
@@ -146,6 +180,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     avg = (float *) calloc(l.outputs, sizeof(float));
     for(j = 0; j < NFRAMES; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+    int i;
 
     if (l.classes != demo_classes) {
         printf("\n Parameters don't match: in cfg-file classes=%d, in data-file classes=%d \n", l.classes, demo_classes);
@@ -210,13 +245,17 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     while(1){
         ++count;
         {
+
+            display_index = (buff_index + 1) %3;
+            detect_index = (buff_index + 2) %3;
+
+            start_loop[buff_index] = get_time_in_ms();
             const float nms = .45;    // 0.4F
             int local_nboxes = nboxes;
             detection *local_dets = dets;
-
             if (!benchmark) if (pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
             if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-
+            double start_disp = get_time_in_ms();
             //if (nms) do_nms_obj(local_dets, local_nboxes, l.classes, nms);    // bad results
             if (nms) {
                 if (l.nms_kind == DEFAULT_NMS) do_nms_sort(local_dets, local_nboxes, l.classes, nms);
@@ -244,10 +283,10 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
                     if (time_limit_sec > 0) send_http_post_once = 1;
                 }
             }
-
+            
             if (!benchmark) draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
             free_detections(local_dets, local_nboxes);
-
+            draw_bbox_time = get_time_in_ms() - start_disp;
             printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
 
             if(!prefix){
@@ -284,7 +323,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
                 write_frame_cv(output_video_writer, show_img);
                 printf("\n cvWriteFrame \n");
             }
+            end_disp = get_time_in_ms();
 
+            d_disp = end_disp - start_disp; 
             pthread_join(detect_thread, 0);
             if (!benchmark) {
                 pthread_join(fetch_thread, 0);
@@ -325,7 +366,53 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
                 start_time = get_time_point();
             }
         }
-    }
+    
+    cycle_array[cycle_index] = 1000./fps;
+    cycle_index = (cycle_index + 1) % 4;
+    //slack_time = (MAX(d_infer, d_disp)) - (d_fetch);
+
+#ifdef MEASUREMENT
+        if (cnt >= CYCLE_OFFSET) push_data();
+
+        /* Exit object detection cycle */
+        if(cnt == ((OBJ_DET_CYCLE_IDX + CYCLE_OFFSET) - 1)) 
+        {
+
+            if(-1 == write_result())
+            {
+                /* return error */
+                exit(0);
+            }
+
+            /* exit loop */
+            break;
+        }
+#endif
+        /* Increase count */
+        if(cnt != ((OBJ_DET_CYCLE_IDX + CYCLE_OFFSET)-1)) cnt++;
+        /* Change buffer index */
+        buff_index = (buff_index + 1) % 3;
+}
+#ifdef MEASUREMENT
+    /* Average data */
+    printf("============ Darknet data ============\n");
+    printf("Avg fetch execution time (ms) : %0.2f\n", e_fetch_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg fetch blocking time (ms) : %0.2f\n", b_fetch_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg fetch delay (ms) : %0.2f\n", d_fetch_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg infer execution on cpu (ms) : %0.2f\n", e_infer_cpu_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg infer execution on gpu (ms) : %0.2f\n", e_infer_gpu_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg infer delay (ms) : %0.2f\n", d_infer_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg disp execution time (ms) : %0.2f\n", e_disp_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg disp blocking time (ms) : %0.2f\n", b_disp_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg disp delay (ms) : %0.2f\n", d_disp_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg salck (ms) : %0.2f\n", slack_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg E2E delay (ms) : %0.2f\n", e2e_delay_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg cycle time (ms) : %0.2f\n", cycle_time_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg inter frame gap : %0.2f\n", inter_frame_gap_sum / OBJ_DET_CYCLE_IDX);
+    printf("Avg number of object : %0.2f\n", num_object_sum / OBJ_DET_CYCLE_IDX);
+    printf("=====================================\n");
+#endif
+
     printf("input video stream closed. \n");
     if (output_video_writer) {
         release_video_writer(&output_video_writer);
@@ -345,7 +432,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     free_ptrs((void **)names, net.layers[net.n - 1].classes);
 
-    int i;
     const int nsize = 8;
     for (j = 0; j < nsize; ++j) {
         for (i = 32; i < 127; ++i) {

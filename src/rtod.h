@@ -4,7 +4,9 @@
 #include "image.h"
 
 #if (defined ZERO_SLACK)
-#define CYCLE_OFFSET 1000
+#define CYCLE_OFFSET 200
+#elif (defined INSTANT) && (defined CONTENTION_FREE)
+#define CYCLE_OFFSET 200
 #else
 #define CYCLE_OFFSET 25
 #endif
@@ -12,7 +14,7 @@
 /* Measurement */
 #define MEASUREMENT_PATH "measure"
 #define MEASUREMENT_FILE "/measure.csv"
-#define OBJ_DET_CYCLE_IDX 1000
+#define OBJ_DET_CYCLE_IDX 500
 
 #define QLEN 4
 #if (defined ZERO_SLACK) && (defined INSTANT)
@@ -31,7 +33,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    void rtod(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes,
+    void rtod(char *datacfg,char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, 
             int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host, int benchmark, int benchmark_layers, int w, int h, int cam_fps);
 
 #ifdef __cplusplus
@@ -59,7 +61,7 @@ int inter_frame_gap_array[OBJ_DET_CYCLE_IDX];
 double cycle_time_array[OBJ_DET_CYCLE_IDX];
 int num_object_array[OBJ_DET_CYCLE_IDX];
 double transfer_delay_array[OBJ_DET_CYCLE_IDX];
-
+double start_loop[3];
 double e_fetch_sum;
 double b_fetch_sum;
 double d_fetch_sum;
@@ -68,6 +70,7 @@ double e_infer_gpu_sum;
 double d_infer_sum;
 double e_disp_sum;
 double b_disp_sum;
+float mean_alpha;
 double d_disp_sum;
 double slack_sum;
 double e2e_delay_sum;
@@ -100,7 +103,7 @@ double cycle_array[QLEN];
 int ondemand;
 int num_object;
 int measure;
-
+int csleep;
 int frame_sequence_tmp;
 int inter_frame_gap;
 
@@ -128,6 +131,10 @@ double b_disp;
 char **demo_names;
 image **demo_alphabet;
 int demo_classes;
+
+int classes;
+int top;
+int* indexes;
 
 int nboxes;
 detection *dets;

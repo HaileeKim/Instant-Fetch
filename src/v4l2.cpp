@@ -33,11 +33,13 @@
 
 struct timeval tv = {0};
 struct v4l2_buffer buf;
-
+extern int csleep = 0;
 using namespace cv;
 
 /* On demand capture flag*/
 int on_demand;
+
+
 
 struct buffer {
     void *start;
@@ -256,14 +258,18 @@ extern "C" {
         buf.memory = V4L2_MEMORY_MMAP;
         enum v4l2_buf_type type;    
         /* On demand capture */
-        usleep(90000);
-        xioctl(fd, VIDIOC_QBUF, &buf);
-        xioctl(fd, VIDIOC_STREAMON, &buf.type);
+#if (defined INSTANT) && (defined CONTENTION_FREE)
+        usleep(csleep);
+#endif
+        // xioctl(fd, VIDIOC_QBUF, &buf);
+        // xioctl(fd, VIDIOC_STREAMON, &buf.type);
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(fd, &fds);
         tv.tv_sec = 2;
         tv.tv_usec = 0;
+        xioctl(fd, VIDIOC_QBUF, &buf);
+        xioctl(fd, VIDIOC_STREAMON, &buf.type);
         double select_start = get_time_in_ms();
         select(fd + 1, &fds, NULL, NULL, &tv);
         f->select = get_time_in_ms() - select_start;
@@ -271,7 +277,7 @@ extern "C" {
         /////
         /* Load frame data */
         f->frame_timestamp = (double)buf.timestamp.tv_sec*1000 
-            + (double)buf.timestamp.tv_usec*0.001;
+             + (double)buf.timestamp.tv_usec*0.001;
 
         f->frame_sequence = buf.sequence;
         
@@ -279,7 +285,7 @@ extern "C" {
     }
     
     /* Conver */
-    int convert_image(struct frame_data *f, int fd)
+    int convert_image(struct frame_data *f)
     {
 
         f->length = buf.length;
