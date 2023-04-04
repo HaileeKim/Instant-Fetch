@@ -12,9 +12,10 @@
 #include "option_list.h"
 #include "dark_cuda.h"
 
-#include <locale.h>
+// #include <locale.h>
 #ifdef WIN32
-#include "/usr/include/time.h"
+// #include "/usr/include/time.h"
+#include <time.h>
 #include "gettimeofday.h"
 #else
 #include <sys/time.h>

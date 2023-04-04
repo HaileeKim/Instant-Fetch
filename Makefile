@@ -78,6 +78,10 @@ LDFLAGS= -lm -pthread -lrt
 COMMON= -Iinclude/ -I3rdparty/stb/include
 CFLAGS=-Wall -Wfatal-errors -Wno-unused-result -Wno-unknown-pragmas -fPIC -Wextra -pedantic
 
+ifeq ($(OPENCV_V4), 1)
+CFLAGS+= -DOPENCV_V4
+endif
+
 ifeq ($(MEASUREMENT), 1)
 CFLAGS+= -DMEASUREMENT
 endif
