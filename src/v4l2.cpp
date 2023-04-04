@@ -77,9 +77,14 @@ extern "C" {
 
     /* Convert cv::Mat to darknet image */
     image matImg_to_image(cv::Mat m)
-    {
+    {        
+#ifdef OPENCV_V4
         IplImage ipl = cvIplImage(m);
         image im = iplImg_to_image(&ipl);
+#else
+        IplImage ipl = m;
+        image im = iplImg_to_image(&ipl);
+#endif
         rgbgr_image(im);
         return im;
     }

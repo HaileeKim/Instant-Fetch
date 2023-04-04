@@ -716,7 +716,7 @@ float *network_predict_gpu(network net, float *input)
     state.truth = 0;
     state.train = 0;
     state.delta = 0;
-
+#ifdef OPENCV_V4
     //cudaGraphExec_t instance = (cudaGraphExec_t)net.cuda_graph_exec;
     static cudaGraphExec_t instance;
 
@@ -753,6 +753,10 @@ float *network_predict_gpu(network net, float *input)
         CHECK_CUDA( cudaStreamSynchronize(stream0) );
         //printf(" ~cudaGraphLaunch \n");
     }
+#else
+    cuda_push_array(state.input, net.input_pinned_cpu, size);
+    forward_network_gpu(net, state);
+#endif
 
     float *out = get_network_output_gpu(net);
     reset_wait_stream_events();
