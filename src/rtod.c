@@ -186,21 +186,21 @@ int get_fetch_offset(void)
         if (offset < 0) offset = 0;
         else{
 
-		printf("Calculated fetch offset: %d ms\n"
-		        " Enter the fetch offset (ms): ", offset);
-		//if offset = 0 -> ondemand
-		
-		if (-1 == scanf("%d", &fetch_offset))
-		{
-		    perror("Invalid fetch offset");
-		    return -1;
+            printf("Calculated fetch offset: %d ms\n"
+                    " Enter the fetch offset (ms): ", offset);
+            //if offset = 0 -> ondemand
+            fetch_offset = offset;
+            // if (-1 == scanf("%d", &fetch_offset))
+            // {
+            //     perror("Invalid fetch offset");
+            //     return -1;
 
-		}
-		else 
-		{
-		    cnt = 0;
-		    measure = 0;
-		}
+            // }
+            // else 
+            // {
+            //     cnt = 0;
+            //     measure = 0;
+            // }
 	}
     }
     else return 0; 
@@ -594,7 +594,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 
     // layer l = net.layers[net.n-1];
     // int j;
-     l = net.layers[net.n-1];
+    l = net.layers[net.n-1];
     avg = (float *) calloc(l.outputs, sizeof(float));
     for(j = 0; j < NFRAMES; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
 
@@ -622,8 +622,6 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     srand(2222222);
 
     classes = option_find_int(options, "classes", 2);
-    //printf("%d=========================\n\n\n", l.output);
-    //printf("\n====%d====\n", l.classes); //0
     top = option_find_int(options, "top", 1);
     if (top > classes) top = classes;
 

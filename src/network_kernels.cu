@@ -733,7 +733,6 @@ float *network_predict_gpu(network net, float *input)
             //cudaGraph_t graph = (cudaGraph_t)net.cuda_graph;
             CHECK_CUDA(cudaStreamBeginCapture(stream0, cudaStreamCaptureModeGlobal));
         }
-        printf("================why???????????????????\n");
         cuda_push_array(state.input, net.input_pinned_cpu, size);
         forward_network_gpu(net, state);
 

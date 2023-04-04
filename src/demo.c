@@ -8,6 +8,8 @@
 #include "image.h"
 #include "rtod.h"
 #include "darknet.h"
+#include "option_list.h"
+#include "dark_cuda.h"
 
 #ifdef WIN32
 #include <time.h>
@@ -59,6 +61,9 @@ static bool demo_skip_frame = false;
 static const int thread_wait_ms = 1;
 static volatile int run_fetch_in_thread = 0;
 static volatile int run_detect_in_thread = 0;
+
+layer l;
+
 /*
 
 //=========================================
@@ -278,11 +283,19 @@ void *detect_in_thread(void *ptr)
         }
 */    
         start_infer = get_time_in_ms();
-        layer l = net.layers[net.n - 1];
+        // layer l = net.layers[net.n - 1];
         float *X = det_s.data;
         //float *prediction =
         network_predict(net, X);
-
+#ifdef DNN
+    memcpy(predictions[demo_index], prediction, l.outputs*sizeof(float));
+    
+    mean_arrays(predictions, NFRAMES, l.outputs, avg);
+    l.output = avg;
+#else
+    if(net.hierarchy) hierarchy_predictions(prediction, net.outputs, net.hierarchy, 1);
+    top_predictions(net, top, indexes);
+#endif
         cv_images[demo_index] = det_img;
         det_img = cv_images[(demo_index + avg_frames / 2 + 1) % avg_frames];
         demo_index = (demo_index + 1) % avg_frames;
@@ -341,30 +354,29 @@ void *display_thread(void *ptr)
 }
 */
 
-void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes, int avgframes,
-    int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int dontdraw_bbox, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host,
-    int benchmark, int benchmark_layers, int w, int h, int cam_fps)
+
+void demo(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host, int benchmark, int benchmark_layers, int w, int h, int cam_fps)
 {
-    if (avgframes < 1) avgframes = 1;
-    avg_frames = avgframes;
+    // if (avgframes < 1) avgframes = 1;
+    // avg_frames = avgframes;
     letter_box = letter_box_in;
     in_img = det_img = show_img = NULL;
     //skip = frame_skip;
     image **alphabet = load_alphabet();
     int delay = frame_skip;
-    demo_names = names;
+    // demo_names = names;
     demo_alphabet = alphabet;
-    demo_classes = classes;
+    // demo_classes = classes;
     demo_thresh = thresh;
     demo_ext_output = ext_output;
     demo_json_port = json_port;
-    
     
 	int img_w = w;
 	int img_h = h;
 	int cam_frame_rate= cam_fps;
     char *pipeline = NULL;
     char *PIPELINE = NULL;
+
 #ifndef V4L2
     pipeline="V";
     PIPELINE = "Vanilla";
@@ -394,16 +406,66 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     sprintf(file_path, "measure/22%d%d_%s_%s.csv", t->tm_mon+1, t->tm_mday, network, pipeline);
     
         
+#ifdef DNN
     printf("Demo\n");
+    list *options = read_data_cfg(datacfg);
+    int classes = option_find_int(options, "classes", 20);
+    char *name_list = option_find_str(options, "names", "data/names.list");
+    char **names = get_labels(name_list);
+    demo_names = names;
+    demo_classes = classes;
+
     net = parse_network_cfg_custom(cfgfile, 1, 1);    // set batch=1
     if(weightfile){
         load_weights(&net, weightfile);
     }
-    if (net.letter_box) letter_box = 1;
+
+    // if (net.letter_box) letter_box = 1;
     net.benchmark_layers = benchmark_layers;
     fuse_conv_batchnorm(net);
     calculate_binary_weights(net);
     srand(2222222);
+
+    // layer l = net.layers[net.n-1];
+    // int j;
+    l = net.layers[net.n-1];
+    avg = (float *) calloc(l.outputs, sizeof(float));
+    for(j = 0; j < NFRAMES; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+
+    if (l.classes != demo_classes) {
+        printf("\n Parameters don't match: in cfg-file classes=%d, in data-file classes=%d \n", l.classes, demo_classes);
+        getchar();
+        exit(0);
+    }
+    flag_exit = 0;
+#else
+    printf("Classifier Demo\n");
+    net = parse_network_cfg_custom(cfgfile, 1, 0);
+    if(weightfile){
+        load_weights(&net, weightfile);
+    }
+    net.benchmark_layers = benchmark_layers;
+    set_batch_network(&net, 1);
+    list *options = read_data_cfg(datacfg);
+
+    // layer l = net.layers[net.n-1];
+    l = net.layers[net.n-1];
+    fuse_conv_batchnorm(net);
+    calculate_binary_weights(net);
+
+    srand(2222222);
+
+    classes = option_find_int(options, "classes", 2);
+    top = option_find_int(options, "top", 1);
+    if (top > classes) top = classes;
+
+    char *name_list = option_find_str(options, "names", 0);
+    int **names = get_labels(name_list);
+
+    demo_names = names;
+    demo_classes = classes;
+    indexes = (int*)xcalloc(top, sizeof(int));
+#endif
 
     if(filename){
         printf("video file: %s\n", filename);
@@ -436,20 +498,12 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
         }
     }
 
-    if (l.classes != demo_classes) {
-        printf("\n Parameters don't match: in cfg-file classes=%d, in data-file classes=%d \n", l.classes, demo_classes);
-        getchar();
-        exit(0);
-    }
-
-    flag_exit = 0;
 /*
     custom_thread_t fetch_thread = NULL;
     custom_thread_t detect_thread = NULL;
     if (custom_create_thread(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed", DARKNET_LOC);
     if (custom_create_thread(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed", DARKNET_LOC);
 */
-
 
     pthread_t fetch_thread;
     pthread_t detect_thread;
@@ -539,8 +593,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
             //printf("\nFPS:%.1f\n", fps);
             printf("Objects:\n\n");
 
-            //if (!benchmark) draw_detections_v3(frame[display_index].frame, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
-            if (!benchmark && !dontdraw_bbox) draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
+            if (!benchmark) draw_detections_v3(frame[display_index].frame, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
+            // if (!benchmark && !dontdraw_bbox) draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
             free_detections(local_dets, local_nboxes);
 
             draw_bbox_time = get_time_in_ms() - start_disp;
@@ -750,9 +804,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     //cudaProfilerStop();
 }
 #else
-void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes, int avgframes,
-    int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int dontdraw_bbox, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host,
-    int benchmark, int benchmark_layers)
+void demo(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, 
+        int frame_skip, char *prefix, char *out_filename, int mjpeg_port, int json_port, int dont_show, int ext_output, int letter_box_in, int time_limit_sec, char *http_post_host,
+        int benchmark, int benchmark_layers)
 {
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
