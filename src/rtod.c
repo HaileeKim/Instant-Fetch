@@ -12,8 +12,9 @@
 #include "option_list.h"
 #include "dark_cuda.h"
 
+#include <locale.h>
 #ifdef WIN32
-#include <time.h>
+#include "/usr/include/time.h"
 #include "gettimeofday.h"
 #else
 #include <sys/time.h>
@@ -181,29 +182,25 @@ int get_fetch_offset(void)
     {
         offset = (int)(s_min - e_fetch_max - b_fetch_max);
 
-        if (offset <= 0) {
-            offset = 0;
-            cnt = 0;
-            measure = 0;
-        }
+        if (offset < 0) offset = 0;
         else{
 
-            printf("Calculated fetch offset: %d ms\n"
-                    " Enter the fetch offset (ms): ", offset);
-            //if offset = 0 -> ondemand
-            
-            if (-1 == scanf("%d", &fetch_offset))
-            {
-                perror("Invalid fetch offset");
-                return -1;
+		printf("Calculated fetch offset: %d ms\n"
+		        " Enter the fetch offset (ms): ", offset);
+		//if offset = 0 -> ondemand
+		
+		if (-1 == scanf("%d", &fetch_offset))
+		{
+		    perror("Invalid fetch offset");
+		    return -1;
 
-            }
-            else 
-            {
-                cnt = 0;
-                measure = 0;
-            }
-	    }
+		}
+		else 
+		{
+		    cnt = 0;
+		    measure = 0;
+		}
+	}
     }
     else return 0; 
 
@@ -355,6 +352,7 @@ void *rtod_queue_thread(void *ptr)
 
 void *rtod_fetch_thread(void *ptr)
 {
+
     start_fetch = get_time_in_ms();
 
     usleep(fetch_offset * 1000);
@@ -394,6 +392,7 @@ void *rtod_fetch_thread(void *ptr)
 #endif
     }
     end_fetch = get_time_in_ms();
+
     image_waiting_time = frame[buff_index].frame_timestamp - start_fetch;
     image_waiting_time -= fetch_offset;
 
@@ -466,6 +465,7 @@ void *rtod_inference_thread(void *ptr)
 #ifdef V4L2
 void *rtod_display_thread(void *ptr)
 {
+
 #ifdef DNN
     int c = show_image_cv(frame[display_index].frame, "Demo");
 #else
@@ -697,10 +697,8 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 #ifdef DNN
         create_window_cv("Demo", full_screen, 1352, 1013);
 #else   
-        // create_window_cv("Classifier Demo", full_screen, 512, 512);
         create_window_cv("Classifier Demo", full_screen, 1352, 1013);
 #endif
-        //make_window("Demo", 1352, 1013, full_screen);
     }
 
     write_cv* output_video_writer = NULL;
@@ -911,10 +909,16 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
             det_s = in_s;
             /* Fork Queue in fetch thread */
          
-            rtod_inference_thread(0);
+            // rtod_inference_thread(0);
+
+            /* Fork Inference thread */
+            if(pthread_create(&inference_thread, 0, rtod_inference_thread, 0)) perror("Thread creation failed");
+
 #ifdef INSTANT
             pthread_join(queue_thread, 0);
 #endif
+            /* Join Inference thread */
+            pthread_join(inference_thread, 0);
 #endif
 
 

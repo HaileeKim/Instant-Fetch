@@ -4,7 +4,7 @@
 #include "image.h"
 
 #if (defined ZERO_SLACK)
-#define CYCLE_OFFSET 25
+#define CYCLE_OFFSET 200
 #elif (defined INSTANT) && (defined CONTENTION_FREE)
 #define CYCLE_OFFSET 200
 #else
@@ -14,7 +14,7 @@
 /* Measurement */
 #define MEASUREMENT_PATH "measure"
 #define MEASUREMENT_FILE "/measure.csv"
-#define OBJ_DET_CYCLE_IDX 1000
+#define OBJ_DET_CYCLE_IDX 500
 
 #define QLEN 4
 #define NFRAMES 3
