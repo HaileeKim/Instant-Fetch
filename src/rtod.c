@@ -181,25 +181,29 @@ int get_fetch_offset(void)
     {
         offset = (int)(s_min - e_fetch_max - b_fetch_max);
 
-        if (offset < 0) offset = 0;
+        if (offset <= 0) {
+            offset = 0;
+            cnt = 0;
+            measure = 0;
+        }
         else{
 
-		printf("Calculated fetch offset: %d ms\n"
-		        " Enter the fetch offset (ms): ", offset);
-		//if offset = 0 -> ondemand
-		
-		if (-1 == scanf("%d", &fetch_offset))
-		{
-		    perror("Invalid fetch offset");
-		    return -1;
+            printf("Calculated fetch offset: %d ms\n"
+                    " Enter the fetch offset (ms): ", offset);
+            //if offset = 0 -> ondemand
+            
+            if (-1 == scanf("%d", &fetch_offset))
+            {
+                perror("Invalid fetch offset");
+                return -1;
 
-		}
-		else 
-		{
-		    cnt = 0;
-		    measure = 0;
-		}
-	}
+            }
+            else 
+            {
+                cnt = 0;
+                measure = 0;
+            }
+	    }
     }
     else return 0; 
 
