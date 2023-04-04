@@ -453,7 +453,7 @@ extern "C" {
             if (mat.channels() == 3) cv::cvtColor(mat, mat, cv::COLOR_RGB2BGR);
             else if (mat.channels() == 4) cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGR);
             cv::namedWindow(name, cv::WINDOW_NORMAL);
-            //cv::imshow(name, mat);
+            cv::imshow(name, mat);
             waitkey_start = get_time_in_ms();
             int c = cv::waitKey(1);
             b_disp = get_time_in_ms() - waitkey_start;
