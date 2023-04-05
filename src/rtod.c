@@ -28,6 +28,7 @@
 #ifdef OPENCV
 
 #include "http_stream.h"
+#include "nvToolsExt.h"
 
 extern int buff_index=0;
 extern int cnt = 0;
@@ -345,8 +346,17 @@ int check_on_demand(void)
 #ifdef INSTANT
 void *rtod_queue_thread(void *ptr)
 {
+#ifdef NVTX
+    nvtxRangeId_t nvtx_queue_thread;
+    nvtx_queue_thread = nvtxRangeStartA("Queue Thread");
+#endif
     printf("here??????\n");
     capture_image(&frame[cap_index], *fd_handler);
+
+#ifdef NVTX
+        nvtxRangeEnd(nvtx_queue_thread);
+#endif //NVTX
+
     return 0;
 }
 #endif
@@ -354,6 +364,10 @@ void *rtod_queue_thread(void *ptr)
 void *rtod_fetch_thread(void *ptr)
 {
 
+#ifdef NVTX
+    nvtxRangeId_t nvtx_fetch_thread;
+    nvtx_fetch_thread = nvtxRangeStartA("Fetch Thread");
+#endif
     start_fetch = get_time_in_ms();
 
     usleep(fetch_offset * 1000);
@@ -410,7 +424,9 @@ void *rtod_fetch_thread(void *ptr)
     printf("\nInference:%.1f\n", d_infer);
     printf("\nFetch:%.1f\n", b_fetch);
     
-
+#ifdef NVTX
+        nvtxRangeEnd(nvtx_fetch_thread);
+#endif //NVTX
     return 0;
 }
 
@@ -418,6 +434,11 @@ void *rtod_fetch_thread(void *ptr)
 
 void *rtod_inference_thread(void *ptr)
 {
+
+#ifdef NVTX
+    nvtxRangeId_t nvtx_inference_thread;
+    nvtx_inference_thread = nvtxRangeStartA("Inference Thread");
+#endif
 
     start_infer = get_time_in_ms();
     //layer l = net.layers[net.n-1];
@@ -460,12 +481,20 @@ void *rtod_inference_thread(void *ptr)
 
     d_infer = end_infer - start_infer;
 
+#ifdef NVTX
+        nvtxRangeEnd(nvtx_inference_thread);
+#endif //NVTX
     return 0;
 }
 
 #ifdef V4L2
 void *rtod_display_thread(void *ptr)
 {
+
+#ifdef NVTX
+    nvtxRangeId_t nvtx_display_thread;
+    nvtx_display_thread = nvtxRangeStartA("Display Thread");
+#endif
 
 #ifdef DNN
     int c = show_image_cv(frame[display_index].frame, "Demo");
@@ -477,6 +506,10 @@ void *rtod_display_thread(void *ptr)
     {
         flag_exit = 1;
     }
+
+#ifdef NVTX
+        nvtxRangeEnd(nvtx_display_thread);
+#endif //NVTX
 
     return 0;
 }

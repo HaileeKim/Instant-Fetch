@@ -11,13 +11,15 @@ ZED_CAMERA_v2_8=0 # ZED SDK 2.X
 # if OPENCV_V4=0, use OPENCV3, if OPENCV_V4=1, use OPENCV4
 OPENCV_V4=1
 
-V4L2=0
+V4L2=1
 ON_DEMAND=1
-ZERO_SLACK=1
-CONTENTION_FREE=0
+ZERO_SLACK=0
+CONTENTION_FREE=1
 MEASUREMENT=1
 DNN=1
 INSTANT=0
+
+NVTX=1
 
 # if DNN=1, use YOLO DNN, if DNN=0, use other DNN 
 # set GPU=1 and CUDNN=1 to speedup on GPU
@@ -81,6 +83,10 @@ CFLAGS=-Wall -Wfatal-errors -Wno-unused-result -Wno-unknown-pragmas -fPIC -Wextr
 
 ifeq ($(OPENCV_V4), 1)
 CFLAGS+= -DOPENCV_V4
+endif
+
+ifeq ($(NVTX), 1)
+CFLAGS+= -DNVTX
 endif
 
 ifeq ($(MEASUREMENT), 1)
@@ -205,7 +211,7 @@ $(APPNAMESO): $(LIBNAMESO) include/yolo_v2_class.hpp src/yolo_console_dll.cpp
 endif
 
 $(EXEC): $(OBJS)
-	$(CPP) -std=c++11 $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CPP) -std=c++11 $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lnvToolsExt
 
 $(OBJDIR)%.o: %.c $(DEPS)
 	$(CC) $(COMMON) $(CFLAGS) -c $< -o $@
