@@ -263,7 +263,7 @@ extern "C" {
         buf.memory = V4L2_MEMORY_MMAP;
         enum v4l2_buf_type type;    
         /* On demand capture */
-#if (defined INSTANT) && (defined CONTENTION_FREE)
+#if (defined INSTANT)
         usleep(csleep);
 #endif
         // xioctl(fd, VIDIOC_QBUF, &buf);

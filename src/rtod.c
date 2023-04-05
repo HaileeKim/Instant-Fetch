@@ -189,7 +189,12 @@ int get_fetch_offset(void)
             printf("Calculated fetch offset: %d ms\n"
                     " Enter the fetch offset (ms): ", offset);
             //if offset = 0 -> ondemand
+            
+#ifdef ON_DEMAND
+            fetch_offset = 0;
+#else
             fetch_offset = offset;
+#endif
             // if (-1 == scanf("%d", &fetch_offset))
             // {
             //     perror("Invalid fetch offset");
@@ -209,20 +214,17 @@ int get_fetch_offset(void)
 }
 #endif
 
-#if (defined INSTANT) && (defined CONTENTION_FREE)
+#if (defined INSTANT)
 /* Calculate cpu sleep */
 int get_sleep(void)
 {
     int coffset;
-
     int tick = 0;
     int mok;
+    measure = 0;
     if (cnt < (CYCLE_OFFSET - 1))
     {
-        
-        cycle_time_sum += 1000./fps;
-
-
+            cycle_time_sum += 1000./fps;
     }
     else if (cnt == (CYCLE_OFFSET - 1)) 
     {
@@ -230,10 +232,7 @@ int get_sleep(void)
 
         if (coffset < 0) coffset = 0;
 	
-
-
         mok = coffset / 33;
-
 
         if (mok < 2)
             csleep = 0;
@@ -346,6 +345,7 @@ int check_on_demand(void)
 #ifdef INSTANT
 void *rtod_queue_thread(void *ptr)
 {
+    printf("here??????\n");
     capture_image(&frame[cap_index], *fd_handler);
     return 0;
 }
@@ -367,7 +367,7 @@ void *rtod_fetch_thread(void *ptr)
 #ifdef INSTANT
         convert_image(&frame[buff_index], *fd_handler);
 #else
-	capture_convert_image(&frame[buff_index], *fd_handler);
+	    capture_convert_image(&frame[buff_index], *fd_handler);
 #endif
         //letterbox_image_into(frame[buff_index].frame, net.w, net.h, frame[buff_index].resize_frame);
         frame[buff_index].resize_frame = letterbox_image(frame[buff_index].frame, net.w, net.h);
@@ -508,14 +508,17 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     fprintf(stderr, "ERROR: Set either ZERO_SLACK or CONTENTION_FREE in Makefile\n");
     exit(0);
 #elif (defined ZERO_SLACK)
-
 #if (defined INSTANT)
     pipeline = "IN+ZS";
     PIPELINE = "INSTANT + ZERO-SLACK";
+#elif (defined ON_DEMAND)
+    pipeline = "OD";
+    PIPELINE = "On-Demand";
 #else
     pipeline = "ZS";
     PIPELINE = "ZERO_SLACK";
 #endif
+
 #elif (defined CONTENTION_FREE) 
 #if (defined INSTANT)
     pipeline = "IN+CF";
@@ -757,13 +760,10 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
             detection *local_dets = dets;
 
             /* Fork queue thread */
-#if (defined INSTANT) && (defined ZERO_SLACK)
+#if (defined INSTANT)
             if (!benchmark) if (pthread_create(&queue_thread, 0, rtod_queue_thread, 0)) perror("Thread creation failed");
 #endif
 
-#if (defined INSTANT) && (defined CONTENTION_FREE)
-            if (!benchmark) if (pthread_create(&queue_thread, 0, rtod_queue_thread, 0)) perror("Thread creation failed");            
-#endif
             /* Fork fetch thread */
             if (!benchmark) if (pthread_create(&fetch_thread, 0, rtod_fetch_thread, 0)) perror("Thread creation failed");
 
@@ -982,7 +982,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
         }
 #endif
 
-#if (defined INSTANT) && (defined CONTENTION_FREE)
+#if (defined INSTANT) 
         if (measure)
         {
             if (-1 == get_sleep())

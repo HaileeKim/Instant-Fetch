@@ -405,6 +405,7 @@ void demo(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     
     sprintf(file_path, "measure/22%d%d_%s_%s.csv", t->tm_mon+1, t->tm_mday, network, pipeline);
     
+    int j;
         
 #ifdef DNN
     printf("Demo\n");
@@ -485,7 +486,6 @@ void demo(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     }
 
     layer l = net.layers[net.n-1];
-    int j;
 
     //cv_images = (mat_cv**)xcalloc(avg_frames, sizeof(mat_cv));
 

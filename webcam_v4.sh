@@ -30,6 +30,10 @@
 # ./darknet detector rtod cfg/coco.data cfg/yolov7.cfg weights/yolov7.weights
 
 
-# ./darknet detector demo cfg/imagenet1k.data cfg/resnet152.cfg weights/resnet152.weights
+./darknet detector demo cfg/imagenet1k.data cfg/resnet152.cfg weights/resnet152.weights
+./darknet detector demo cfg/imagenet1k.data cfg/alexnet.cfg weights/alexnet.weights
+./darknet detector demo cfg/imagenet1k.data cfg/densenet.cfg weights/densenet.weights
 
-./darknet detector rtod cfg/imagenet1k.data cfg/resnet152.cfg weights/resnet152.weights
+# ./darknet detector rtod cfg/imagenet1k.data cfg/resnet152.cfg weights/resnet152.weights
+# ./darknet detector rtod cfg/imagenet1k.data cfg/alexnet.cfg weights/alexnet.weights
+# ./darknet detector rtod cfg/imagenet1k.data cfg/densenet.cfg weights/densenet.weights
