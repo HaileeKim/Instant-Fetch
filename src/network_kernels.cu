@@ -31,6 +31,7 @@
 #include "route_layer.h"
 #include "shortcut_layer.h"
 #include "blas.h"
+#include "nvToolsExt.h"
 
 //#ifdef OPENCV
 //#include <opencv2/highgui/highgui_c.h>
@@ -76,6 +77,10 @@ void forward_network_gpu(network net, network_state state)
 
     //printf("\n");
     state.workspace = net.workspace;
+    nvtxRangeId_t nvtx_layer;
+    nvtxRangeId_t nvtx_forward_gpu;
+    nvtxRangeId_t nvtx_forward_network;
+    nvtx_forward_network = nvtxRangeStartA("Forward_network_gpu");
     int i;
     gpu_kernel_start = get_time_in_ms();
     for(i = 0; i < net.n; ++i){
@@ -88,9 +93,31 @@ void forward_network_gpu(network net, network_state state)
         if (net.benchmark_layers) {
             start_time = get_time_point();
         }
-
+        char str_nvtx[100];
+        if(l.type == CONVOLUTIONAL){
+            sprintf(str_nvtx, "CONV %d", i);
+        }
+        else if(l.type == ROUTE){
+            sprintf(str_nvtx, "ROUTE %d", i);
+        }
+        else if(l.type == SHORTCUT){
+            sprintf(str_nvtx, "SHORTCUT %d", i);
+        }
+        else if(l.type == MAXPOOL){
+            sprintf(str_nvtx, "MAXPOOL %d", i);
+        }
+        else if(l.type == YOLO){
+            sprintf(str_nvtx, "YOLO %d", i);
+        }
+        else if(l.type == REGION){
+            sprintf(str_nvtx, "REGION %d", i);
+        }
+        nvtx_layer = nvtxRangeStartA(str_nvtx);
+        nvtx_forward_gpu = nvtxRangeStartW(L"l.forward_gpu");
         l.forward_gpu(l, state);
 
+        nvtxRangeEnd(nvtx_forward_gpu);
+        nvtxRangeEnd(nvtx_layer);
         if (net.benchmark_layers) {
             CHECK_CUDA(cudaDeviceSynchronize());
             end_time = get_time_point();
@@ -152,6 +179,7 @@ void forward_network_gpu(network net, network_state state)
         }
     }
 
+    nvtxRangeEnd(nvtx_forward_network);
     //cudaStreamSynchronize(get_cuda_stream());   // sync CUDA-functions
     //cudaDeviceSynchronize();
 }

@@ -11,6 +11,7 @@
 #include "darknet.h"
 #include "option_list.h"
 #include "dark_cuda.h"
+#include "nvToolsExt.h"
 
 // #include <locale.h>
 #ifdef WIN32
@@ -28,7 +29,6 @@
 #ifdef OPENCV
 
 #include "http_stream.h"
-#include "nvToolsExt.h"
 
 extern int buff_index=0;
 extern int cnt = 0;
@@ -346,16 +346,12 @@ int check_on_demand(void)
 #ifdef INSTANT
 void *rtod_queue_thread(void *ptr)
 {
-#ifdef NVTX
     nvtxRangeId_t nvtx_queue_thread;
     nvtx_queue_thread = nvtxRangeStartA("Queue Thread");
-#endif
-    printf("here??????\n");
+    
     capture_image(&frame[cap_index], *fd_handler);
 
-#ifdef NVTX
-        nvtxRangeEnd(nvtx_queue_thread);
-#endif //NVTX
+    nvtxRangeEnd(nvtx_queue_thread);
 
     return 0;
 }
@@ -364,10 +360,8 @@ void *rtod_queue_thread(void *ptr)
 void *rtod_fetch_thread(void *ptr)
 {
 
-#ifdef NVTX
-    nvtxRangeId_t nvtx_fetch_thread;
-    nvtx_fetch_thread = nvtxRangeStartA("Fetch Thread");
-#endif
+    nvtxRangeId_t nvtx_Fetch;
+    nvtx_Fetch = nvtxRangeStartA("Fetch Thread");
     start_fetch = get_time_in_ms();
 
     usleep(fetch_offset * 1000);
@@ -406,6 +400,7 @@ void *rtod_fetch_thread(void *ptr)
         }
 #endif
     }
+    nvtxRangeEnd(nvtx_Fetch);
     end_fetch = get_time_in_ms();
 
     image_waiting_time = frame[buff_index].frame_timestamp - start_fetch;
@@ -424,9 +419,6 @@ void *rtod_fetch_thread(void *ptr)
     printf("\nInference:%.1f\n", d_infer);
     printf("\nFetch:%.1f\n", b_fetch);
     
-#ifdef NVTX
-        nvtxRangeEnd(nvtx_fetch_thread);
-#endif //NVTX
     return 0;
 }
 
@@ -435,11 +427,8 @@ void *rtod_fetch_thread(void *ptr)
 void *rtod_inference_thread(void *ptr)
 {
 
-#ifdef NVTX
-    nvtxRangeId_t nvtx_inference_thread;
-    nvtx_inference_thread = nvtxRangeStartA("Inference Thread");
-#endif
-
+    nvtxRangeId_t nvtx_Infer;
+    nvtx_Infer = nvtxRangeStartA("Inference Thread");
     start_infer = get_time_in_ms();
     //layer l = net.layers[net.n-1];
 #ifdef V4L2
@@ -477,13 +466,11 @@ void *rtod_inference_thread(void *ptr)
 #endif
 
 
+    nvtxRangeEnd(nvtx_Infer);
     end_infer = get_time_in_ms();
 
     d_infer = end_infer - start_infer;
 
-#ifdef NVTX
-        nvtxRangeEnd(nvtx_inference_thread);
-#endif //NVTX
     return 0;
 }
 
@@ -491,11 +478,9 @@ void *rtod_inference_thread(void *ptr)
 void *rtod_display_thread(void *ptr)
 {
 
-#ifdef NVTX
     nvtxRangeId_t nvtx_display_thread;
     nvtx_display_thread = nvtxRangeStartA("Display Thread");
-#endif
-
+    // usleep(50000);
 #ifdef DNN
     int c = show_image_cv(frame[display_index].frame, "Demo");
 #else
@@ -507,9 +492,7 @@ void *rtod_display_thread(void *ptr)
         flag_exit = 1;
     }
 
-#ifdef NVTX
-        nvtxRangeEnd(nvtx_display_thread);
-#endif //NVTX
+    nvtxRangeEnd(nvtx_display_thread);
 
     return 0;
 }
@@ -820,6 +803,11 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 
             double start_disp = get_time_in_ms();
 
+            nvtxRangeId_t nvtx_display;
+            nvtxRangeId_t nvtx_draw_bbox;
+            nvtxRangeId_t nvtx_free_detections;
+            nvtx_display = nvtxRangeStartA("Display Block");
+            nvtx_draw_bbox = nvtxRangeStartA("Draw BBox");
             // nms = 0.45
             if (nms) {
                 if (l.nms_kind == DEFAULT_NMS){ // other dnn
@@ -827,20 +815,26 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
                 }
                 else { //yolo
                     diounms_sort(local_dets, local_nboxes, classes, nms, l.nms_kind, l.beta_nms);
-                }}
+                }
+            }
 #ifdef V4L2
 
             if (!benchmark) {
                 draw_detections_v3(frame[display_index].frame, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
 
             }
+            nvtxRangeEnd(nvtx_draw_bbox);
+
+            nvtx_free_detections = nvtxRangeStartA("Free Detections");
             free_detections(local_dets, local_nboxes);
+            nvtxRangeEnd(nvtx_free_detections);
 
             draw_bbox_time = get_time_in_ms() - start_disp;
 
             /* Image display */
             rtod_display_thread(0);
 
+            nvtxRangeEnd(nvtx_display);
             end_disp = get_time_in_ms();
 
             d_disp = end_disp - start_disp; 

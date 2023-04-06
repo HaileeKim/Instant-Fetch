@@ -22,6 +22,7 @@
 #include "darknet.h"
 #include "image_opencv.h"
 #include "v4l2_opencv.h"
+#include "nvToolsExt.h"
 
 #define DEFAULT_V4L_QLEN 1 /* Queue length */
 //#define DEFAULT_CAM_FPS 30 /* 30 FPS */
@@ -342,6 +343,7 @@ extern "C" {
     {
         enum v4l2_buf_type type;
 
+        nvtxRangeId_t nvtx_select;
         memset(&buf, 0x00, sizeof(struct v4l2_buffer));
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         buf.memory = V4L2_MEMORY_MMAP;
@@ -367,12 +369,14 @@ extern "C" {
 
         double select_start = get_time_in_ms();
 
+        nvtx_select = nvtxRangeStartA("Image Waiting");
         if(-1 == select(fd + 1, &fds, NULL, NULL, &tv))
 		{
 			perror("Select");
 			return -1;
 		}
 
+        nvtxRangeEnd(nvtx_select);
         f->select = get_time_in_ms() - select_start;
 
         if(-1 == xioctl(fd, VIDIOC_DQBUF, &buf))

@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <atomic>
 
+#include "nvToolsExt.h"
+
 #include <opencv2/core/version.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -464,6 +466,9 @@ extern "C" int show_image_cv(image p, const char *name)
 	//        if (c != -1) c = c%256;
 	double waitkey_start;
 	extern double b_disp;
+    nvtxRangeId_t nvtx_disp_exe;
+    nvtxRangeId_t nvtx_disp_block;
+    nvtxRangeId_t nvtx_disp_free;
 
 	try {
 	    image copy = copy_image(p);
@@ -474,14 +479,20 @@ extern "C" int show_image_cv(image p, const char *name)
 	    if (mat.channels() == 3) cv::cvtColor(mat, mat, cv::COLOR_RGB2BGR);
 	    else if (mat.channels() == 4) cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGR);
 	    cv::namedWindow(name, cv::WINDOW_NORMAL);
+        nvtx_disp_exe = nvtxRangeStartW(L"imshow()");
 	    cv::imshow(name, mat);
 
+        nvtxRangeEnd(nvtx_disp_exe);
 	    waitkey_start = get_time_in_ms();
+        nvtx_disp_block = nvtxRangeStartW(L"wait_key_cy(1)");
 	    int c = wait_key_cv(1);
+        nvtxRangeEnd(nvtx_disp_block);
 	    //int c = cv::waitKey(1);
 	    b_disp = get_time_in_ms() - waitkey_start;
 
+        nvtx_disp_free = nvtxRangeStartW(L"free_image()");
 	    free_image(copy);
+        nvtxRangeEnd(nvtx_disp_free);
 
 	    return c;
 	}
