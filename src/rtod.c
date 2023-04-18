@@ -343,7 +343,7 @@ int check_on_demand(void)
     return on_demand;
 }
 
-#ifdef INSTANT
+#ifdef INSTANT && V4L2
 void *rtod_queue_thread(void *ptr)
 {
     nvtxRangeId_t nvtx_queue_thread;

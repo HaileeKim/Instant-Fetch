@@ -699,6 +699,7 @@ extern "C" mat_cv* get_capture_frame_cv(cap_cv *cap) {
         cv::Mat *mat = NULL;
         try {
             mat = new cv::Mat();
+            printf("?????\n");
             if (cap) {
                 cv::VideoCapture &cpp_cap = *(cv::VideoCapture *)cap;
                 if (cpp_cap.isOpened())
@@ -901,19 +902,22 @@ extern "C" image get_image_from_stream_resize(cap_cv *cap, int w, int h, int c, 
                 src = (cv::Mat*)get_capture_frame_cv_with_timestamp(cap,f);
                 if (!src) return make_empty_image(0, 0, 0);
             } while (src->cols < 1 || src->rows < 1 || src->channels() < 1);
+            printf("======11==== \n");
             printf("Video stream: %d x %d \n", src->cols, src->rows);
+            printf("======22====\n");
         }
-        else
-            //src = (cv::Mat*)get_capture_frame_cv(cap);
+        else{
             src = (cv::Mat*)get_capture_frame_cv_with_timestamp(cap, f);
-
+            //src = (cv::Mat*)get_capture_frame_cv(cap);
+            printf("======33====\n");
+        }
+        printf("========44==\n");
         *(cv::Mat **)in_img = src;
 
         cv::Mat new_img = cv::Mat(h, w, CV_8UC(c));
         cv::resize(*src, new_img, new_img.size(), 0, 0, cv::INTER_LINEAR);
         if (c>1) cv::cvtColor(new_img, new_img, cv::COLOR_RGB2BGR);
         image im = mat_to_image(new_img);
-
         //show_image_cv(im, "im");
         //show_image_mat(*in_img, "in_img");
         return im;
