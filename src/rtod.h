@@ -4,9 +4,9 @@
 #include "image.h"
 
 #if (defined ZERO_SLACK)
-#define CYCLE_OFFSET 50
+#define CYCLE_OFFSET 100
 #elif (defined INSTANT)
-#define CYCLE_OFFSET 50
+#define CYCLE_OFFSET 100
 #else
 #define CYCLE_OFFSET 50
 #endif

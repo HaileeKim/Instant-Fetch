@@ -222,7 +222,6 @@ int get_sleep(void)
     int coffset;
     int tick = 0;
     int mok;
-    measure = 0;
     if (cnt < (CYCLE_OFFSET - 1))
     {
             cycle_time_sum += 1000./fps;
@@ -234,12 +233,13 @@ int get_sleep(void)
         if (coffset < 0) coffset = 0;
 	
         mok = coffset / 33;
-
         if (mok < 2)
             csleep = 0;
-        else
+        else {
             csleep = (mok -1) * 33333;
+        }
         cycle_time_sum = 0;
+        measure = 0;
 
     }
     else return 0; 
@@ -1010,6 +1010,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 #endif
 
 #if (defined INSTANT) 
+
         if (measure)
         {
             if (-1 == get_sleep())
