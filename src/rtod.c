@@ -172,9 +172,9 @@ int get_fetch_offset(void)
 
     if (cnt < (CYCLE_OFFSET - 1))
     {
-        printf("\nMIN cycle time : %f\n", MIN(s_min, (1000./fps)));
-        printf("MAX e_fetch : %f\n", MAX(e_fetch_max, e_fetch));
-        printf("MAX b_fetch : %f\n", MAX(b_fetch_max, b_fetch));
+        // printf("\nMIN cycle time : %f\n", MIN(s_min, (1000./fps)));
+        // printf("MAX e_fetch : %f\n", MAX(e_fetch_max, e_fetch));
+        // printf("MAX b_fetch : %f\n", MAX(b_fetch_max, b_fetch));
 
         s_min = MIN(s_min, (1000./fps));
         e_fetch_max = MAX(e_fetch_max, e_fetch);
@@ -187,8 +187,8 @@ int get_fetch_offset(void)
         if (offset < 0) offset = 0;
         else{
 
-            printf("Calculated fetch offset: %d ms\n"
-                    " Enter the fetch offset (ms): ", offset);
+            // printf("Calculated fetch offset: %d ms\n"
+            //         " Enter the fetch offset (ms): ", offset);
             //if offset = 0 -> ondemand
             
 #ifdef ON_DEMAND
@@ -196,6 +196,8 @@ int get_fetch_offset(void)
 #else
             fetch_offset = offset;
 #endif
+            measure = 0;
+            cnt = 0;
             // if (-1 == scanf("%d", &fetch_offset))
             // {
             //     perror("Invalid fetch offset");
@@ -215,20 +217,21 @@ int get_fetch_offset(void)
 }
 #endif
 
-#if (defined INSTANT)
+#if (defined INSTANT) && (defined CONTENTION_FREE) 
 /* Calculate cpu sleep */
+
 int get_sleep(void)
 {
-    int coffset;
-    int tick = 0;
     int mok;
+    float coffset;
+    int tick = 0;
     if (cnt < (CYCLE_OFFSET - 1))
     {
             cycle_time_sum += 1000./fps;
     }
     else if (cnt == (CYCLE_OFFSET - 1)) 
     {
-        coffset = (int)(cycle_time_sum) / (cnt-1);
+        coffset = (cycle_time_sum) / (cnt-1);
 
         if (coffset < 0) coffset = 0;
 	
@@ -278,8 +281,8 @@ void push_data(void)
 
     //printf("num_object : %d\n", num_object);
     //printf("slack: %f\n",slack[cnt-CYCLE_OFFSET]);
-    printf("latency: %f\n",e2e_delay[cnt - CYCLE_OFFSET]);
-    printf("cnt : %d\n",cnt);
+    // printf("latency: %f\n",e2e_delay[cnt - CYCLE_OFFSET]);
+    // printf("cnt : %d\n",cnt);
 
     return;
 }
@@ -346,12 +349,12 @@ int check_on_demand(void)
 #ifdef INSTANT && V4L2
 void *rtod_queue_thread(void *ptr)
 {
-    nvtxRangeId_t nvtx_queue_thread;
-    nvtx_queue_thread = nvtxRangeStartA("Queue Thread");
+    // nvtxRangeId_t nvtx_queue_thread;
+    // nvtx_queue_thread = nvtxRangeStartA("Queue Thread");
     
     capture_image(&frame[cap_index], *fd_handler);
 
-    nvtxRangeEnd(nvtx_queue_thread);
+    // nvtxRangeEnd(nvtx_queue_thread);
 
     return 0;
 }
@@ -360,8 +363,8 @@ void *rtod_queue_thread(void *ptr)
 void *rtod_fetch_thread(void *ptr)
 {
 
-    nvtxRangeId_t nvtx_Fetch;
-    nvtx_Fetch = nvtxRangeStartA("Fetch Thread");
+    // nvtxRangeId_t nvtx_Fetch;
+    // nvtx_Fetch = nvtxRangeStartA("Fetch Thread");
     start_fetch = get_time_in_ms();
 
     usleep(fetch_offset * 1000);
@@ -400,7 +403,7 @@ void *rtod_fetch_thread(void *ptr)
         }
 #endif
     }
-    nvtxRangeEnd(nvtx_Fetch);
+    // nvtxRangeEnd(nvtx_Fetch);
     end_fetch = get_time_in_ms();
 
     image_waiting_time = frame[buff_index].frame_timestamp - start_fetch;
@@ -416,8 +419,8 @@ void *rtod_fetch_thread(void *ptr)
     b_fetch = frame[buff_index].select;
     e_fetch = d_fetch - b_fetch - fetch_offset;
     
-    printf("\nInference:%.1f\n", d_infer);
-    printf("\nFetch:%.1f\n", b_fetch);
+    // printf("\nInference:%.1f\n", d_infer);
+    // printf("\nFetch:%.1f\n", b_fetch);
     
     return 0;
 }
@@ -427,8 +430,8 @@ void *rtod_fetch_thread(void *ptr)
 void *rtod_inference_thread(void *ptr)
 {
 
-    nvtxRangeId_t nvtx_Infer;
-    nvtx_Infer = nvtxRangeStartA("Inference Thread");
+    // nvtxRangeId_t nvtx_Infer;
+    // nvtx_Infer = nvtxRangeStartA("Inference Thread");
     start_infer = get_time_in_ms();
     //layer l = net.layers[net.n-1];
 #ifdef V4L2
@@ -457,7 +460,6 @@ void *rtod_inference_thread(void *ptr)
 
 #ifdef V4L2
     dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
-    printf("oboxes = %d", nboxes);
 #else
     if (letter_box)
         dets = get_network_boxes(&net, get_width_mat(in_img), get_height_mat(in_img), demo_thresh, demo_thresh, 0, 1, &nboxes, 1); // letter box
@@ -466,7 +468,7 @@ void *rtod_inference_thread(void *ptr)
 #endif
 
 
-    nvtxRangeEnd(nvtx_Infer);
+    // nvtxRangeEnd(nvtx_Infer);
     end_infer = get_time_in_ms();
 
     d_infer = end_infer - start_infer;
@@ -478,8 +480,8 @@ void *rtod_inference_thread(void *ptr)
 void *rtod_display_thread(void *ptr)
 {
 
-    nvtxRangeId_t nvtx_display_thread;
-    nvtx_display_thread = nvtxRangeStartA("Display Thread");
+    // nvtxRangeId_t nvtx_display_thread;
+    // nvtx_display_thread = nvtxRangeStartA("Display Thread");
     // usleep(50000);
 #ifdef DNN
     int c = show_image_cv(frame[display_index].frame, "Demo");
@@ -492,7 +494,7 @@ void *rtod_display_thread(void *ptr)
         flag_exit = 1;
     }
 
-    nvtxRangeEnd(nvtx_display_thread);
+    // nvtxRangeEnd(nvtx_display_thread);
 
     return 0;
 }
@@ -675,7 +677,6 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 
 #ifdef V4L2
     capture_convert_image(&frame[buff_index], *fd_handler);
-    printf("======1\n");
 
     frame[0].resize_frame = letterbox_image(frame[0].frame, net.w, net.h);
 
@@ -689,9 +690,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     frame[3].resize_frame = letterbox_image(frame[0].frame, net.w, net.h);
 #endif
 #else
-    printf("======1\n");
     rtod_fetch_thread(0);
-    printf("======1\n");
     det_img = in_img;
     det_s = in_s;
 
@@ -789,25 +788,25 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 #endif
 
 	    
-	    /* display thread */
-	    printf("start display");
+            /* display thread */
+            printf("start display");
             printf("\033[2J");
             printf("\033[1;1H");
 #ifdef ZERO_SLACK
             if(measure) printf("Measuring...\n");
 #endif
-            printf("\nImage_waiting:%.1f\n", image_waiting_time);
+            // printf("\nImage_waiting:%.1f\n", image_waiting_time);
 
             printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
             printf("Objects:\n\n");
 
             double start_disp = get_time_in_ms();
 
-            nvtxRangeId_t nvtx_display;
-            nvtxRangeId_t nvtx_draw_bbox;
-            nvtxRangeId_t nvtx_free_detections;
-            nvtx_display = nvtxRangeStartA("Display Block");
-            nvtx_draw_bbox = nvtxRangeStartA("Draw BBox");
+            // nvtxRangeId_t nvtx_display;
+            // nvtxRangeId_t nvtx_draw_bbox;
+            // nvtxRangeId_t nvtx_free_detections;
+            // nvtx_display = nvtxRangeStartA("Display Block");
+            // nvtx_draw_bbox = nvtxRangeStartA("Draw BBox");
             // nms = 0.45
             if (nms) {
                 if (l.nms_kind == DEFAULT_NMS){ // other dnn
@@ -823,18 +822,18 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
                 draw_detections_v3(frame[display_index].frame, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
 
             }
-            nvtxRangeEnd(nvtx_draw_bbox);
+            // nvtxRangeEnd(nvtx_draw_bbox);
 
-            nvtx_free_detections = nvtxRangeStartA("Free Detections");
+            // nvtx_free_detections = nvtxRangeStartA("Free Detections");
             free_detections(local_dets, local_nboxes);
-            nvtxRangeEnd(nvtx_free_detections);
+            // nvtxRangeEnd(nvtx_free_detections);
 
             draw_bbox_time = get_time_in_ms() - start_disp;
 
             /* Image display */
             rtod_display_thread(0);
 
-            nvtxRangeEnd(nvtx_display);
+            // nvtxRangeEnd(nvtx_display);
             end_disp = get_time_in_ms();
 
             d_disp = end_disp - start_disp; 
@@ -844,12 +843,10 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
             ++frame_id;
             if (demo_json_port > 0) {
                 int timeout = 400000;
-                printf("\n================\n");
                 //send_json(local_dets, local_nboxes, l.classes, demo_names, frame_id, demo_json_port, timeout);
                 send_json(local_dets, local_nboxes, classes, demo_names, frame_id, demo_json_port, timeout);
             }
 
-            printf("\n================\n");
             //char *http_post_server = "webhook.site/898bbd9b-0ddd-49cf-b81d-1f56be98d870";
             if (http_post_host && !send_http_post_once) {
                 int timeout = 3;            // 3 seconds
@@ -867,7 +864,6 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
 
             free_detections(local_dets, local_nboxes);
 
-            //printf("\n================\n");
             if(!prefix){
                 if (!dont_show) {
 #ifdef DNN
@@ -1009,7 +1005,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
         }
 #endif
 
-#if (defined INSTANT) 
+#if (defined INSTANT) && (defined CONTENTION_FREE)    
 
         if (measure)
         {
@@ -1066,6 +1062,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
     printf("Avg cycle time (ms) : %0.2f\n", cycle_time_sum / OBJ_DET_CYCLE_IDX);
     printf("Avg inter frame gap : %0.2f\n", inter_frame_gap_sum / OBJ_DET_CYCLE_IDX);
     printf("Avg number of object : %0.2f\n", num_object_sum / OBJ_DET_CYCLE_IDX);
+    printf("Fetch Offset : %0.2f\n", fetch_offset);
     printf("=====================================\n");
 #endif
 
