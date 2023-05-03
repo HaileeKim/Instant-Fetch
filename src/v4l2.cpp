@@ -531,6 +531,7 @@ extern "C" {
 		static int fd;
 
         fd = open(cam_dev, O_RDWR | O_NONBLOCK, 0);
+        printf("=-===fd_handler : %d \n", fd);
         if (fd == -1)
         {
             fprintf(stderr, "VIDEOIO ERROR : Opening video device");
@@ -539,6 +540,7 @@ extern "C" {
         }
 
         print_caps(fd, w, h);
+        printf("=-===fd_handler : %d \n", fd);
 
         if (set_framerate(fd, fps) < 0)
         {
@@ -547,13 +549,14 @@ extern "C" {
             return NULL;
         }
 
+        printf("=-===fd_handler : %d \n", fd);
         if(init_mmap(fd) == -1)
         {
             fprintf(stderr, "VIDEOIO ERROR : Fail memory mapping");
             //return -1;
             return NULL;
         }
-
+        printf("=-===fd_handler : %d \n", fd);
         //return 1;
 		return &fd;
     }

@@ -425,8 +425,6 @@ void *rtod_fetch_thread(void *ptr)
     return 0;
 }
 
-
-
 void *rtod_inference_thread(void *ptr)
 {
 
@@ -577,6 +575,7 @@ void rtod(char *datacfg, char *cfgfile, char *weightfile, float thresh, float hi
         printf("cam dev : %s\n", cam_dev);
 
         fd_handler = open_device(cam_dev, cam_frame_rate, img_w, img_h);
+        printf("fd_handler : %d ==\n", *fd_handler);
         if(fd_handler ==  NULL)
         {
             perror("Couldn't connect to webcam.\n");
